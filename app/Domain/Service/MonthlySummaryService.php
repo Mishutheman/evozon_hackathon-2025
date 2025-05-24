@@ -15,19 +15,51 @@ class MonthlySummaryService
 
     public function computeTotalExpenditure(User $user, int $year, int $month): float
     {
-        // TODO: compute expenses total for year-month for a given user
-        return 0;
+        $criteria = [
+            'user_id' => $user->id,
+            'year' => $year,
+            'month' => $month,
+        ];
+
+        return $this->expenses->sumAmounts($criteria);
     }
 
     public function computePerCategoryTotals(User $user, int $year, int $month): array
     {
-        // TODO: compute totals for year-month for a given user
-        return [];
+        $criteria = [
+            'user_id' => $user->id,
+            'year' => $year,
+            'month' => $month,
+        ];
+
+        $totals = $this->expenses->sumAmountsByCategory($criteria);
+
+        foreach ($totals as $category => $data) {
+            $totals[$category]['value'] = $data['value'] / 100;
+        }
+
+        return $totals;
     }
 
     public function computePerCategoryAverages(User $user, int $year, int $month): array
     {
-        // TODO: compute averages for year-month for a given user
-        return [];
+        $criteria = [
+            'user_id' => $user->id,
+            'year' => $year,
+            'month' => $month,
+        ];
+
+        $averages = $this->expenses->averageAmountsByCategory($criteria);
+
+        foreach ($averages as $category => $data) {
+            $averages[$category]['value'] = $data['value'] / 100;
+        }
+
+        return $averages;
+    }
+
+    public function getAvailableYears(User $user): array
+    {
+        return $this->expenses->listExpenditureYears($user);
     }
 }

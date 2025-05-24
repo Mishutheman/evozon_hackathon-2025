@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Domain\Service\ExpenseService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Log\LoggerInterface;
 use Slim\Views\Twig;
 
 class ExpenseController extends BaseController
@@ -16,94 +17,359 @@ class ExpenseController extends BaseController
     public function __construct(
         Twig $view,
         private readonly ExpenseService $expenseService,
+        private readonly LoggerInterface $logger,
     ) {
         parent::__construct($view);
     }
 
     public function index(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to display the expenses page
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
 
-        // Hints:
-        // - use the session to get the current user ID
-        // - use the request query parameters to determine the page number and page size
-        // - use the expense service to fetch expenses for the current user
 
-        // parse request parameters
-        $userId = 1; // TODO: obtain logged-in user ID from session
-        $page = (int)($request->getQueryParams()['page'] ?? 1);
-        $pageSize = (int)($request->getQueryParams()['pageSize'] ?? self::PAGE_SIZE);
+        $user = new \App\Domain\Entity\User($userId, $_SESSION['username'] ?? '', '', new \DateTimeImmutable());
 
-        $expenses = $this->expenseService->list($userId, $page, $pageSize);
+        // Parse request parameters
+        $queryParams = $request->getQueryParams();
+        $page = (int)($queryParams['page'] ?? 1);
+        $pageSize = (int)($queryParams['pageSize'] ?? self::PAGE_SIZE);
+
+        $year = (int)($queryParams['year'] ?? date('Y'));
+        $month = (int)($queryParams['month'] ?? date('n'));
+
+        // Get expenses list
+        $result = $this->expenseService->list($user, $year, $month, $page, $pageSize);
+
+        // Prepare next and previous page
+        $queryString = http_build_query([
+            'year' => $year,
+            'month' => $month,
+            'pageSize' => $pageSize,
+        ]);
+
+        $prevPageUrl = $page > 1 
+            ? "/expenses?page=" . ($page - 1) . "&" . $queryString 
+            : null;
+
+        $nextPageUrl = $page < $result['totalPages'] 
+            ? "/expenses?page=" . ($page + 1) . "&" . $queryString 
+            : null;
+
+        $categories = [
+            'groceries' => 'Groceries',
+            'utilities' => 'Utilities',
+            'transport' => 'Transport',
+            'entertainment' => 'Entertainment',
+            'housing' => 'Housing',
+            'health' => 'Healthcare',
+            'other' => 'Other',
+        ];
+
+        // Get flash message from session
+        $flash = $_SESSION['flash'] ?? null;
+
+        // Clear flash message from session
+        if (isset($_SESSION['flash'])) {
+            unset($_SESSION['flash']);
+        }
 
         return $this->render($response, 'expenses/index.twig', [
-            'expenses' => $expenses,
-            'page'     => $page,
+            'expenses' => $result['expenses'],
+            'total' => $result['totalCount'],
+            'page' => $page,
             'pageSize' => $pageSize,
+            'prevPageUrl' => $prevPageUrl,
+            'nextPageUrl' => $nextPageUrl,
+            'years' => $result['years'],
+            'year' => $year,
+            'month' => $month,
+            'categories' => $categories,
+            'flash' => $flash,
         ]);
     }
 
     public function create(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to display the create expense page
+        $categories = [
+            'groceries' => 'Groceries',
+            'utilities' => 'Utilities',
+            'transport' => 'Transport',
+            'entertainment' => 'Entertainment',
+            'housing' => 'Housing',
+            'health' => 'Healthcare',
+            'other' => 'Other',
+        ];
 
-        // Hints:
-        // - obtain the list of available categories from configuration and pass to the view
+        $today = date('Y-m-d');
 
-        return $this->render($response, 'expenses/create.twig', ['categories' => []]);
+        return $this->render($response, 'expenses/create.twig', [
+            'categories' => $categories,
+            'date' => $today,
+            'errors' => [],
+        ]);
     }
 
     public function store(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to create a new expense
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
 
-        // Hints:
-        // - use the session to get the current user ID
-        // - use the expense service to create and persist the expense entity
-        // - rerender the "expenses.create" page with included errors in case of failure
-        // - redirect to the "expenses.index" page in case of success
 
-        return $response;
+        $user = new \App\Domain\Entity\User($userId, $_SESSION['username'] ?? '', '', new \DateTimeImmutable());
+
+        // Get form data
+        $data = $request->getParsedBody();
+        $date = $data['date'] ?? date('Y-m-d');
+        $category = $data['category'] ?? '';
+        $amount = (float)($data['amount'] ?? 0);
+        $description = $data['description'] ?? '';
+
+        // Define expense categories for re-rendering the form if needed
+        $categories = [
+            'groceries' => 'Groceries',
+            'utilities' => 'Utilities',
+            'transport' => 'Transport',
+            'entertainment' => 'Entertainment',
+            'housing' => 'Housing',
+            'health' => 'Healthcare',
+            'other' => 'Other',
+        ];
+
+        try {
+            // Create date object from the date string
+            $dateObj = new \DateTimeImmutable($date);
+
+            // Create the expense
+            $this->expenseService->create($user, $amount, $description, $dateObj, $category);
+
+            // Redirect to expenses list on success
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        } catch (\InvalidArgumentException $e) {
+            // Re-render the form with error message on fail
+            return $this->render($response, 'expenses/create.twig', [
+                'categories' => $categories,
+                'date' => $date,
+                'category' => $category,
+                'amount' => $amount,
+                'description' => $description,
+                'errors' => ['message' => $e->getMessage()],
+            ]);
+        } catch (\Exception $e) {
+            // Re-render with a generic error message for other exceptions
+            return $this->render($response, 'expenses/create.twig', [
+                'categories' => $categories,
+                'date' => $date,
+                'category' => $category,
+                'amount' => $amount,
+                'description' => $description,
+                'errors' => ['message' => 'An error occurred while saving the expense.'],
+            ]);
+        }
     }
 
     public function edit(Request $request, Response $response, array $routeParams): Response
     {
-        // TODO: implement this action method to display the edit expense page
+        // Get the user ID from session
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
 
-        // Hints:
-        // - obtain the list of available categories from configuration and pass to the view
-        // - load the expense to be edited by its ID (use route params to get it)
-        // - check that the logged-in user is the owner of the edited expense, and fail with 403 if not
+        // Get expense ID from route parameters
+        $expenseId = (int)($routeParams['id'] ?? 0);
+        if (!$expenseId) {
+            // No valid ID provided, redirect to expenses list
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
 
-        $expense = ['id' => 1];
+        // Find expense by ID
+        $expense = $this->expenseService->findById($expenseId);
 
-        return $this->render($response, 'expenses/edit.twig', ['expense' => $expense, 'categories' => []]);
+        // Check that expense exists and belongs to the current user
+        if (!$expense || $expense->userId !== $userId) {
+            // Redirect to expenses list
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
+
+        // Define expense categories
+        $categories = [
+            'groceries' => 'Groceries',
+            'utilities' => 'Utilities',
+            'transport' => 'Transport',
+            'entertainment' => 'Entertainment',
+            'housing' => 'Housing',
+            'health' => 'Healthcare',
+            'other' => 'Other',
+        ];
+
+        // Format date for form
+        $formattedDate = $expense->date->format('Y-m-d');
+
+        // Format amount for form
+        $formattedAmount = $expense->amountCents / 100;
+
+        return $this->render($response, 'expenses/edit.twig', [
+            'expense' => $expense,
+            'categories' => $categories,
+            'date' => $formattedDate,
+            'amount' => $formattedAmount,
+            'errors' => [],
+        ]);
     }
 
     public function update(Request $request, Response $response, array $routeParams): Response
     {
-        // TODO: implement this action method to update an existing expense
+        // Get the user ID from session
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
 
-        // Hints:
-        // - load the expense to be edited by its ID (use route params to get it)
-        // - check that the logged-in user is the owner of the edited expense, and fail with 403 if not
-        // - get the new values from the request and prepare for update
-        // - update the expense entity with the new values
-        // - rerender the "expenses.edit" page with included errors in case of failure
-        // - redirect to the "expenses.index" page in case of success
+        // Get expense ID from route parameters
+        $expenseId = (int)($routeParams['id'] ?? 0);
+        if (!$expenseId) {
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
 
-        return $response;
+        // Find expense by ID
+        $expense = $this->expenseService->findById($expenseId);
+
+        // Check that expense exists and belongs to the user
+        if (!$expense || $expense->userId !== $userId) {
+            // Redirect to expenses list
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
+
+        // Get form data
+        $data = $request->getParsedBody();
+        $date = $data['date'] ?? date('Y-m-d');
+        $category = $data['category'] ?? '';
+        $amount = (float)($data['amount'] ?? 0);
+        $description = $data['description'] ?? '';
+
+        // Define expense categories for re-rendering
+        $categories = [
+            'groceries' => 'Groceries',
+            'utilities' => 'Utilities',
+            'transport' => 'Transport',
+            'entertainment' => 'Entertainment'
+        ];
+
+        try {
+            // Create date object from the date string
+            $dateObj = new \DateTimeImmutable($date);
+
+            // Update expense
+            $this->expenseService->update($expense, $amount, $description, $dateObj, $category);
+
+            // Redirect to expenses list
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        } catch (\InvalidArgumentException $e) {
+            // Re-render the form with error message on failure
+            return $this->render($response, 'expenses/edit.twig', [
+                'expense' => $expense,
+                'categories' => $categories,
+                'date' => $date,
+                'category' => $category,
+                'amount' => $amount,
+                'description' => $description,
+                'errors' => ['message' => $e->getMessage()],
+            ]);
+        } catch (\Exception $e) {
+            // Re-render with a generic error message on other errors
+            return $this->render($response, 'expenses/edit.twig', [
+                'expense' => $expense,
+                'categories' => $categories,
+                'date' => $date,
+                'category' => $category,
+                'amount' => $amount,
+                'description' => $description,
+                'errors' => ['message' => 'An error occurred while updating the expense.'],
+            ]);
+        }
     }
 
     public function destroy(Request $request, Response $response, array $routeParams): Response
     {
-        // TODO: implement this action method to delete an existing expense
+        // Get the user ID from session
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
 
-        // - load the expense to be edited by its ID (use route params to get it)
-        // - check that the logged-in user is the owner of the edited expense, and fail with 403 if not
-        // - call the repository method to delete the expense
-        // - redirect to the "expenses.index" page
+        // Get expense ID from route parameters
+        $expenseId = (int)($routeParams['id'] ?? 0);
+        if (!$expenseId) {
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
 
-        return $response;
+        // Find expense by ID
+        $expense = $this->expenseService->findById($expenseId);
+
+        // Check that expense exists and belongs to the current user
+        if (!$expense || $expense->userId !== $userId) {
+            // Redirect to expenses list
+            $_SESSION['flash'] = [
+                'type' => 'error',
+                'message' => 'You do not have permission to delete this expense.'
+            ];
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
+
+        // Delete expense
+        $this->expenseService->delete($expenseId);
+
+        // Redirect to expenses list
+        return $response->withHeader('Location', '/expenses')->withStatus(302);
+    }
+
+    public function import(Request $request, Response $response): Response
+    {
+        // Get user ID from session
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        // Get user object
+        $user = new \App\Domain\Entity\User($userId, $_SESSION['username'] ?? '', '', new \DateTimeImmutable());
+
+        // Get uploaded files
+        $uploadedFiles = $request->getUploadedFiles();
+        $csvFile = $uploadedFiles['csv'] ?? null;
+
+        // Check if file was uploaded
+        if (!$csvFile || $csvFile->getError() !== UPLOAD_ERR_OK) {
+            // Redirect to expenses list
+            $_SESSION['flash'] = [
+                'type' => 'error',
+                'message' => 'No CSV file uploaded or upload error occurred'
+            ];
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
+
+        try {
+            // Import expenses from CSV
+            $importedCount = $this->expenseService->importFromCsv($user, $csvFile);
+
+            // Redirect to expenses list with success
+            $_SESSION['flash'] = [
+                'type' => 'success',
+                'message' => "Successfully imported $importedCount expenses"
+            ];
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        } catch (\Exception $e) {
+            // Redirect to expenses list with error
+            $_SESSION['flash'] = [
+                'type' => 'error',
+                'message' => 'Error importing expenses: ' . $e->getMessage()
+            ];
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
     }
 }

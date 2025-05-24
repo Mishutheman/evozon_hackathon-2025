@@ -2,20 +2,17 @@
 {% block title %}Expenses{% endblock %}
 {% block content %}
 
-    {# TODO: remove mock data below, pass real expenses from the controller action #}
-    {% set expenses = [
-        {'id': 1, 'description': 'Groceries', 'amount': 150.50, 'category': 'Food', 'date': '2025-05-31'},
-        {'id': 2, 'description': 'Internet Bill', 'amount': 79.99, 'category': 'Utilities', 'date': '2025-05-25'},
-        {'id': 3, 'description': 'Movie Tickets', 'amount': 30.00, 'category': 'Entertainment', 'date': '2025-05-18'},
-        {'id': 4, 'description': 'Gas', 'amount': 45.75, 'category': 'Transportation', 'date': '2025-05-10'},
-        {'id': 5, 'description': 'Gym Membership', 'amount': 50.00, 'category': 'Health', 'date': '2025-05-05'}
-    ] %}
-    {% set total = 5 %}
+    {# Expenses data is passed from the controller #}
 
     <h1 class="text-2xl font-bold mb-4">Expenses</h1>
 
-    {# TODO: Configure the necessary href attribute #}
-    <a href=""
+    {% if flash is defined and flash.message is defined %}
+        <div class="mb-4 {% if flash.type == 'success' %}bg-green-900/50 border border-green-700{% else %}bg-red-900/50 border border-red-700{% endif %} rounded-lg p-4">
+            <p class="{% if flash.type == 'success' %}text-green-300{% else %}text-red-300{% endif %}">{{ flash.message }}</p>
+        </div>
+    {% endif %}
+
+    <a href="/expenses/create"
        class="inline-block mb-6 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
         Add Expense
     </a>
@@ -26,30 +23,29 @@
         <form action="/expenses" method="GET" class="mb-6 flex gap-4">
             <div>
                 <label for="year" class="block text-gray-300 text-sm font-bold mb-2">Year</label>
-                {# TODO: remove mock data below, pass actual years with expenses from the controller #}
                 <select name="year" id="year"
                         class="shadow border rounded py-2 px-3 text-gray-400 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="2025" selected>2025</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
+                    {% for yearOption in years %}
+                        <option value="{{ yearOption }}" {% if yearOption == year %}selected{% endif %}>{{ yearOption }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div>
                 <label for="month" class="block text-gray-300 text-sm font-bold mb-2">Month</label>
                 <select name="month" id="month"
                         class="shadow border rounded py-2 px-3 text-gray-400 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5" selected>May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
+                    <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                    <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                    <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                    <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                    <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                    <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                    <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                    <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                    <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                    <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                    <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                    <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
                 </select>
             </div>
             <div class="self-end">
@@ -79,11 +75,9 @@
                     <td class="py-2 px-4">{{ expense.date|date('m/d/Y') }}</td>
                     <td class="py-2 px-4">{{ expense.category }}</td>
                     <td class="py-2 px-4">
-                        {# TODO: Configure the necessary href attribute #}
-                        <a href="#"
+                        <a href="/expenses/{{ expense.id }}/edit"
                            class="text-blue-500 hover:text-blue-400 mr-2">Edit</a>
-                        {# TODO: Configure the necessary form action #}
-                        <form action="#" method="POST" class="inline">
+                        <form action="/expenses/{{ expense.id }}/delete" method="POST" class="inline">
                             <button type="submit"
                                     class="text-red-500 hover:text-red-400">Delete
                             </button>
@@ -97,21 +91,23 @@
         {# Listing pagination #}
         <div class="mt-1 flex justify-center">{{ total }} item(s)</div>
         <div class="mt-1 flex justify-between">
-            {% if total and page > 1 %}
-                {# TODO: fill in HREF #}
-                <a href="#" class="text-blue-500 hover:text-blue-400">Previous</a>
+            {% if prevPageUrl %}
+                <a href="{{ prevPageUrl }}" class="text-blue-500 hover:text-blue-400">Previous</a>
             {% else %}
                 <span></span>
             {% endif %}
 
-            {# TODO: hide link when there is no next page available, fill in HREF #}
-            <a href="#" class="text-blue-500 hover:text-blue-400">Next</a>
+            {% if nextPageUrl %}
+                <a href="{{ nextPageUrl }}" class="text-blue-500 hover:text-blue-400">Next</a>
+            {% else %}
+                <span></span>
+            {% endif %}
         </div>
     </section>
 
     <section class="mb-8">
         <h2 class="text-xl font-bold mb-4">Import expenses from CSV</h2>
-        <form action="expenses/import" method="POST" enctype="multipart/form-data" class="flex items-center gap-4">
+        <form action="/expenses/import" method="POST" enctype="multipart/form-data" class="flex items-center gap-4">
             <label for="csvFile" class="text-gray-300 text-sm font-bold">CSV File</label>
             <input type="file" id="csv" name="csv" accept=".csv" required
                    class="shadow appearance-none border rounded py-2 px-3 text-gray-500 leading-tight focus:outline-none focus:shadow-outline">

@@ -20,6 +20,7 @@ return static function (App $app) {
             $expense->get('', [ExpenseController::class, 'index']);
             $expense->get('/create', [ExpenseController::class, 'create']);
             $expense->post('', [ExpenseController::class, 'store']);
+            $expense->post('/import', [ExpenseController::class, 'import']);
             $expense->get('/{id}/edit', [ExpenseController::class, 'edit']);
             $expense->post('/{id}', [ExpenseController::class, 'update']);
             $expense->post('/{id}/delete', [ExpenseController::class, 'destroy']);
