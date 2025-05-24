@@ -40,7 +40,6 @@ class AuthController extends BaseController
             $this->authService->register($username, $password, $confPass);
             return $response->withHeader('Location', '/login')->withStatus(302);
         } catch (\InvalidArgumentException $e) {
-            // Determine which field has the error
             $errorMessage = $e->getMessage();
             if (strpos($errorMessage, 'Username') !== false) {
                 $errors['username'] = $errorMessage;
@@ -48,7 +47,7 @@ class AuthController extends BaseController
                 $errors['password'] = $errorMessage;
             }
 
-            // Re-render the register form with errors
+
             return $this->render(
                 $response, 
                 'auth/register.twig', 
@@ -72,13 +71,10 @@ class AuthController extends BaseController
         $username = $data['username'] ?? '';
         $password = $data['password'] ?? '';
 
-        // Attempt to authenticate the user
         if ($this->authService->attempt($username, $password)) {
-            // On success, redirect to Dashboard page
             return $response->withHeader('Location', '/')->withStatus(302);
         }
 
-        // On failure, render Login page with error message
         return $this->render(
             $response, 
             'auth/login.twig', 
@@ -91,10 +87,8 @@ class AuthController extends BaseController
 
     public function logout(Request $request, Response $response): Response
     {
-        // Clear session data
         $_SESSION = [];
 
-        // Destroy the session
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
             setcookie(
@@ -110,7 +104,6 @@ class AuthController extends BaseController
 
         session_destroy();
 
-        // Redirect to login page
         return $response->withHeader('Location', '/login')->withStatus(302);
     }
 }

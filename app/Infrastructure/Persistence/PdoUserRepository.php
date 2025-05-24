@@ -61,7 +61,6 @@ class PdoUserRepository implements UserRepositoryInterface
     public function save(User $user): void
     {
         if ($user->id === null) {
-            // Insert new user
             $query = 'INSERT INTO users (username, password_hash, created_at) VALUES (:username, :password_hash, :created_at)';
             $statement = $this->pdo->prepare($query);
             $statement->execute([
@@ -72,7 +71,6 @@ class PdoUserRepository implements UserRepositoryInterface
 
             $user->id = (int) $this->pdo->lastInsertId();
         } else {
-            // Update existing user
             $query = 'UPDATE users SET username = :username, password_hash = :password_hash WHERE id = :id';
             $statement = $this->pdo->prepare($query);
             $statement->execute([

@@ -15,18 +15,18 @@ class AuthService
 
     public function register(string $username, string $password, string $password_confirm): User
     {
-        // Check if user with same username already exists
+        // Check if user with same username exists
         $existingUser = $this->users->findByUsername($username);
         if ($existingUser !== null) {
             throw new \InvalidArgumentException('Username already exists');
         }
 
-        // Validate username length (≥ 4 chars)
+        // Validate username length (>= 4 chars)
         if (strlen($username) < 4) {
             throw new \InvalidArgumentException('Username must be at least 4 characters long');
         }
 
-        // Validate password (≥ 8 chars, 1 number)
+        // Validate password (>= 8 chars, 1 number)
         if (strlen($password) < 8) {
             throw new \InvalidArgumentException('Password must be at least 8 characters long');
         }
@@ -35,14 +35,14 @@ class AuthService
             throw new \InvalidArgumentException('Password must contain at least one number');
         }
 
+        // Check if password and confirmation match
         if($password_confirm !== $password) {
             throw new \InvalidArgumentException('Password and confirmation password do not match');
         }
 
-        // Hash the password
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Create and save the user
+
         $user = new User(null, $username, $passwordHash, new \DateTimeImmutable());
         $this->users->save($user);
 
@@ -51,18 +51,16 @@ class AuthService
 
     public function attempt(string $username, string $password): bool
     {
-        // Find the user by username
+
         if (empty($username) || empty($password)) {
-            return false; // Invalid credentials
+            return false;
         }
         $user = $this->users->findByUsername($username);
 
-        // Check if user exists and password matches
         if ($user === null || !password_verify($password, $user->passwordHash)) {
             return false;
         }
 
-        // Store user data in session
         $_SESSION['user_id'] = $user->id;
         $_SESSION['username'] = $user->username;
 
