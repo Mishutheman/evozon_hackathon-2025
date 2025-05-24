@@ -19,6 +19,15 @@
                 <span class="text-red-500">{{ errors['password'] }}</span>
             {% endif %}
         </div>
+        <div class="mb-6">
+            <label for="password_confirm" class="block text-gray-400 text-sm font-bold mb-2">Confirm Password</label>
+            <input type="password" id="password_confirm" name="password_confirm" required
+                   value="{{ password_confirm|default('') }}"
+                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-400 leading-tight focus:outline-none focus:shadow-outline">
+            {% if errors['password_confirm'] is defined %}
+                <span class="text-red-500">{{ errors['password_confirm'] }}</span>
+            {% endif %}
+        </div>
         <button type="submit"
                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
             Register

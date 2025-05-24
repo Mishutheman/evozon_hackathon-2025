@@ -30,9 +30,35 @@ class AuthController extends BaseController
 
     public function register(Request $request, Response $response): Response
     {
-        // TODO: call corresponding service to perform user registration
+        $data = $request->getParsedBody();
+        $username = $data['username'] ?? '';
+        $password = $data['password'] ?? '';
+        $confPass = $data['password_confirm'] ?? '';
+        $errors = [];
 
-        return $response->withHeader('Location', '/login')->withStatus(302);
+        try {
+            $this->authService->register($username, $password, $confPass);
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        } catch (\InvalidArgumentException $e) {
+            // Determine which field has the error
+            $errorMessage = $e->getMessage();
+            if (strpos($errorMessage, 'Username') !== false) {
+                $errors['username'] = $errorMessage;
+            } else {
+                $errors['password'] = $errorMessage;
+            }
+
+            // Re-render the register form with errors
+            return $this->render(
+                $response, 
+                'auth/register.twig', 
+                [
+                    'username' => $username,
+                    'password' => $password,
+                    'errors' => $errors
+                ]
+            );
+        }
     }
 
     public function showLogin(Request $request, Response $response): Response
@@ -42,15 +68,49 @@ class AuthController extends BaseController
 
     public function login(Request $request, Response $response): Response
     {
-        // TODO: call corresponding service to perform user login, handle login failures
+        $data = $request->getParsedBody();
+        $username = $data['username'] ?? '';
+        $password = $data['password'] ?? '';
 
-        return $response->withHeader('Location', '/')->withStatus(302);
+        // Attempt to authenticate the user
+        if ($this->authService->attempt($username, $password)) {
+            // On success, redirect to Dashboard page
+            return $response->withHeader('Location', '/')->withStatus(302);
+        }
+
+        // On failure, render Login page with error message
+        return $this->render(
+            $response, 
+            'auth/login.twig', 
+            [
+                'username' => $username,
+                'error' => 'Invalid username or password'
+            ]
+        );
     }
 
     public function logout(Request $request, Response $response): Response
     {
-        // TODO: handle logout by clearing session data and destroying session
+        // Clear session data
+        $_SESSION = [];
 
+        // Destroy the session
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
+            );
+        }
+
+        session_destroy();
+
+        // Redirect to login page
         return $response->withHeader('Location', '/login')->withStatus(302);
     }
 }

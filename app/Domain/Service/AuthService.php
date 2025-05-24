@@ -13,13 +13,37 @@ class AuthService
         private readonly UserRepositoryInterface $users,
     ) {}
 
-    public function register(string $username, string $password): User
+    public function register(string $username, string $password, string $password_confirm): User
     {
-        // TODO: check that a user with same username does not exist, create new user and persist
-        // TODO: make sure password is not stored in plain, and proper PHP functions are used for that
+        // Check if user with same username already exists
+        $existingUser = $this->users->findByUsername($username);
+        if ($existingUser !== null) {
+            throw new \InvalidArgumentException('Username already exists');
+        }
 
-        // TODO: here is a sample code to start with
-        $user = new User(null, $username, $password, new \DateTimeImmutable());
+        // Validate username length (≥ 4 chars)
+        if (strlen($username) < 4) {
+            throw new \InvalidArgumentException('Username must be at least 4 characters long');
+        }
+
+        // Validate password (≥ 8 chars, 1 number)
+        if (strlen($password) < 8) {
+            throw new \InvalidArgumentException('Password must be at least 8 characters long');
+        }
+
+        if (!preg_match('/[0-9]/', $password)) {
+            throw new \InvalidArgumentException('Password must contain at least one number');
+        }
+
+        if($password_confirm !== $password) {
+            throw new \InvalidArgumentException('Password and confirmation password do not match');
+        }
+
+        // Hash the password
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+        // Create and save the user
+        $user = new User(null, $username, $passwordHash, new \DateTimeImmutable());
         $this->users->save($user);
 
         return $user;
@@ -27,9 +51,20 @@ class AuthService
 
     public function attempt(string $username, string $password): bool
     {
-        // TODO: implement this for authenticating the user
-        // TODO: make sur ethe user exists and the password matches
-        // TODO: don't forget to store in session user data needed afterwards
+        // Find the user by username
+        if (empty($username) || empty($password)) {
+            return false; // Invalid credentials
+        }
+        $user = $this->users->findByUsername($username);
+
+        // Check if user exists and password matches
+        if ($user === null || !password_verify($password, $user->passwordHash)) {
+            return false;
+        }
+
+        // Store user data in session
+        $_SESSION['user_id'] = $user->id;
+        $_SESSION['username'] = $user->username;
 
         return true;
     }

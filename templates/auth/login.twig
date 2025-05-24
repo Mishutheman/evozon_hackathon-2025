@@ -2,10 +2,15 @@
 {% block title %}Login{% endblock %}
 {% block content %}
     <h1 class="text-2xl font-bold mb-4">Login</h1>
+    {% if error %}
+        <div class="bg-red-900/50 border border-red-700 rounded-lg p-4 mb-4 max-w-sm mx-auto">
+            <p class="text-red-300">{{ error }}</p>
+        </div>
+    {% endif %}
     <form action="/login" method="POST" class="max-w-sm mx-auto">
         <div class="mb-4">
             <label for="username" class="block text-gray-400 text-sm font-bold mb-2">Username</label>
-            <input type="text" id="username" name="username" required
+            <input type="text" id="username" name="username" required value="{{ username|default('') }}"
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-400 leading-tight focus:outline-none focus:shadow-outline">
         </div>
         <div class="mb-6">
