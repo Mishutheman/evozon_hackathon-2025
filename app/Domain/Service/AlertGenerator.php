@@ -10,7 +10,7 @@ use App\Domain\Repository\ExpenseRepositoryInterface;
 class AlertGenerator
 {
     public function __construct(
-        private readonly CategoryBudgetService $categoryBudgetService,
+        private readonly CategoryBudgetService $catBudgetServ,
         private readonly ExpenseRepositoryInterface $expenses,
     ) {}
 
@@ -37,7 +37,7 @@ class AlertGenerator
         // Check each category against budget
         foreach ($categoryTotals as $category => $data) {
             $amountEuros = $data['value'] / 100;
-            $budget = $this->categoryBudgetService->getBudgetForCategory(strtolower($category));
+            $budget = $this->catBudgetServ->getBudgetForCategory(strtolower($category));
 
             // Skip if no budget defined
             if ($budget === null) {

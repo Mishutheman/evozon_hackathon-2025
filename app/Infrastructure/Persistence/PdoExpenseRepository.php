@@ -128,6 +128,7 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
         $query = 'SELECT COUNT(*) FROM expenses WHERE 1=1';
         $params = [];
 
+
         // Add criteria to query
         if (isset($criteria['user_id'])) {
             $query .= ' AND user_id = :user_id';

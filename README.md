@@ -104,10 +104,21 @@ A solution with passing analysis and unit tests will receive extra points.
 ## Delivery details
 
 Participant:
-- Full name: ...
-- Email address: ...
+- Full name: Mihai Man
+- Email address: mihaiman123@yahoo.com
 
 Features fully implemented:
-- ...
+- Register, login and logout functionalities implemented
+- CRUD on Expenses
+- Dashboard functionalities (filter, average per month, total per month)
+- CSV import functionality
+
+Optional features implemented:
+- composer analyze command returned "OK"
+- Using prepared statements when querying, user may delete only own expenses
+- Propper password hashing, "password again" field and check, password verify
+- Pagination with "1 2 3 ... " page links
+- Wraping import operation in one transaction, rollback on error
+- "Success" message on succes, along with total number of imported expenses
 
 Other instructions about setting up the application (if any): ...

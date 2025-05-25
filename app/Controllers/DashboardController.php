@@ -17,9 +17,9 @@ class DashboardController extends BaseController
 {
     public function __construct(
         Twig $view,
-        private readonly MonthlySummaryService $monthlySummaryService,
+        private readonly MonthlySummaryService $monthSummService,
         private readonly AlertGenerator $alertGenerator,
-        private readonly CategoryBudgetService $categoryBudgetService,
+        private readonly CategoryBudgetService $catBudgetService,
     )
     {
         parent::__construct($view);
@@ -46,19 +46,19 @@ class DashboardController extends BaseController
         $month = (int)($queryParams['month'] ?? date('n'));
 
         // Get available years for the selector
-        $years = $this->monthlySummaryService->getAvailableYears($user);
+        $years = $this->monthSummService->getAvailableYears($user);
 
         // Overspending alerts for current month
         $alerts = $this->alertGenerator->generate($user, $year, $month);
 
         // Total expenditure for year/month
-        $totalForMonth = $this->monthlySummaryService->computeTotalExpenditure($user, $year, $month);
+        $totalForMonth = $this->monthSummService->computeTotalExpenditure($user, $year, $month);
 
         // Category totals for year/month
-        $totalsForCategories = $this->monthlySummaryService->computePerCategoryTotals($user, $year, $month);
+        $totalsForCat = $this->monthSummService->computePerCategoryTotals($user, $year, $month);
 
         // Category averages for year/month
-        $averagesForCategories = $this->monthlySummaryService->computePerCategoryAverages($user, $year, $month);
+        $avgForCat = $this->monthSummService->computePerCategoryAverages($user, $year, $month);
 
         return $this->render($response, 'dashboard.twig', [
             'years' => $years,
@@ -66,8 +66,8 @@ class DashboardController extends BaseController
             'month' => $month,
             'alerts' => $alerts,
             'totalForMonth' => $totalForMonth,
-            'totalsForCategories' => $totalsForCategories,
-            'averagesForCategories' => $averagesForCategories,
+            'totalsForCategories' => $totalsForCat,
+            'averagesForCategories' => $avgForCat,
         ]);
     }
 }

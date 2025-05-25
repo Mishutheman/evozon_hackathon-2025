@@ -16,6 +16,7 @@ class AuthController extends BaseController
         Twig $view,
         private AuthService $authService,
         private LoggerInterface $logger,
+
     ) {
         parent::__construct($view);
     }

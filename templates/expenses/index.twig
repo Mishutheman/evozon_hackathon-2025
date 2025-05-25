@@ -89,19 +89,34 @@
         </table>
 
         {# Listing pagination #}
-        <div class="mt-1 flex justify-center">{{ total }} item(s)</div>
-        <div class="mt-1 flex justify-between">
-            {% if prevPageUrl %}
-                <a href="{{ prevPageUrl }}" class="text-blue-500 hover:text-blue-400">Previous</a>
-            {% else %}
-                <span></span>
-            {% endif %}
+        <div class="mt-1 flex justify-center">{{ total }} item(s) in total</div>
+        <div class="mt-2 flex items-center justify-between">
+            <div class="w-20 text-left">
+                {% if prevPageUrl %}
+                    <a href="{{ prevPageUrl }}" class="text-blue-500 hover:text-blue-400">Previous</a>
+                {% else %}
+                    <span class="inline-block">&nbsp;</span>
+                {% endif %}
+            </div>
 
-            {% if nextPageUrl %}
-                <a href="{{ nextPageUrl }}" class="text-blue-500 hover:text-blue-400">Next</a>
-            {% else %}
-                <span></span>
-            {% endif %}
+            <div class="flex items-center gap-1">
+                {% for i in 1..totalPages %}
+                    {% if i == currentPage %}
+                        <span class="px-2 py-1 bg-blue-600 text-white rounded font-bold text-sm">{{ i }}</span>
+                    {% else %}
+                        <a href="?year={{ year }}&month={{ month }}&page={{ i }}"
+                           class="px-2 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm">{{ i }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="w-20 text-right">
+                {% if nextPageUrl %}
+                    <a href="{{ nextPageUrl }}" class="text-blue-500 hover:text-blue-400">Next</a>
+                {% else %}
+                    <span class="inline-block">&nbsp;</span>
+                {% endif %}
+            </div>
         </div>
     </section>
 

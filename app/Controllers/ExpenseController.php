@@ -12,7 +12,7 @@ use Slim\Views\Twig;
 
 class ExpenseController extends BaseController
 {
-    private const PAGE_SIZE = 20;
+    private const PAGE_SIZE = 2;
 
     public function __construct(
         Twig $view,
@@ -62,10 +62,7 @@ class ExpenseController extends BaseController
             'groceries' => 'Groceries',
             'utilities' => 'Utilities',
             'transport' => 'Transport',
-            'entertainment' => 'Entertainment',
-            'housing' => 'Housing',
-            'health' => 'Healthcare',
-            'other' => 'Other',
+            'entertainment' => 'Entertainment'
         ];
 
         // Get flash message from session
@@ -76,6 +73,8 @@ class ExpenseController extends BaseController
             unset($_SESSION['flash']);
         }
 
+        $totalPages = $result['totalPages'];
+
         return $this->render($response, 'expenses/index.twig', [
             'expenses' => $result['expenses'],
             'total' => $result['totalCount'],
@@ -83,6 +82,7 @@ class ExpenseController extends BaseController
             'pageSize' => $pageSize,
             'prevPageUrl' => $prevPageUrl,
             'nextPageUrl' => $nextPageUrl,
+            'totalPages' => $totalPages,
             'years' => $result['years'],
             'year' => $year,
             'month' => $month,
@@ -97,10 +97,7 @@ class ExpenseController extends BaseController
             'groceries' => 'Groceries',
             'utilities' => 'Utilities',
             'transport' => 'Transport',
-            'entertainment' => 'Entertainment',
-            'housing' => 'Housing',
-            'health' => 'Healthcare',
-            'other' => 'Other',
+            'entertainment' => 'Entertainment'
         ];
 
         $today = date('Y-m-d');
@@ -134,10 +131,7 @@ class ExpenseController extends BaseController
             'groceries' => 'Groceries',
             'utilities' => 'Utilities',
             'transport' => 'Transport',
-            'entertainment' => 'Entertainment',
-            'housing' => 'Housing',
-            'health' => 'Healthcare',
-            'other' => 'Other',
+            'entertainment' => 'Entertainment'
         ];
 
         try {
